@@ -60,12 +60,12 @@ scripts/                      # automation
 
 ## Dependencies
 
-| Language   | Allowed                                                                  |
-|------------|--------------------------------------------------------------------------|
-| Python     | `numpy`, `torch`, `h5py`, `zstandard`, `safetensors`, stdlib              |
+| Language   | Allowed                                                                                 |
+| ---------- | --------------------------------------------------------------------------------------- |
+| Python     | `numpy`, `torch`, `h5py`, `zstandard`, `safetensors`, stdlib                            |
 | TypeScript | `hono`, `zod`, `ws` (only when WebSockets needed), `@hono/node-server`, Node 20+ stdlib |
-| Rust       | stdlib only (single-file `rustc --edition 2021`)                          |
-| Julia      | `Random`, `Statistics`, `LinearAlgebra`, `Printf` (Julia stdlib)          |
+| Rust       | stdlib only (single-file `rustc --edition 2021`)                                        |
+| Julia      | `Random`, `Statistics`, `LinearAlgebra`, `Printf` (Julia stdlib)                        |
 
 If a finding suggests a banned dep, skip it with the reason "stays stdlib-first for educational clarity."
 
@@ -114,37 +114,37 @@ Keep the distractors comparable in length to the correct option. When the correc
 
 ### Claude certification contract
 
-Certification lessons under `certifications/claude/lessons/` follow the same
-documentation, quiz, diagram, dependency, and one-commit-per-lesson rules as
-phase lessons. Every certification lesson needs a runnable main file and at
-least five deterministic tests. Tracks reference stable lesson paths so one
-lesson can serve several credentials without duplication. Conceptual lessons
-still need practical work: use a scenario runner, policy scorer, artifact
-validator, approval simulator, threat-model checker, or evidence grader instead
-of artificial provider API code. A track may also reference an existing
+Certification lessons under `certifications/claude/lessons/` follow the same  
+documentation, quiz, diagram, dependency, and one-commit-per-lesson rules as  
+phase lessons. Every certification lesson needs a runnable main file and at  
+least five deterministic tests. Tracks reference stable lesson paths so one  
+lesson can serve several credentials without duplication. Conceptual lessons  
+still need practical work: use a scenario runner, policy scorer, artifact  
+validator, approval simulator, threat-model checker, or evidence grader instead  
+of artificial provider API code. A track may also reference an existing  
 `phases/` lesson as an optional deep dive.
 
-Full-parity certification lessons use the same explain, manipulate, build,
-ship, and verify loop as the strongest phase lessons. Every certification
-lesson must include the exact sections `Interactive Lab`, `Practice Lab`,
-`Shipped Artifact`, `Verify It`, and `Capstone Connection`; embed a registered
-`figure` mechanism; ship at least one file under `outputs/`; and provide a
-runnable scenario, simulator, scorer, or artifact validator with tests. Code in
-a conceptual lesson must exercise the lesson's judgment. Do not add a fake API
-integration merely to satisfy the runnable surface. Governance lessons can use
-mock incidents, policy scorers, threat-model checks, ADR validation, approval
+Full-parity certification lessons use the same explain, manipulate, build,  
+ship, and verify loop as the strongest phase lessons. Every certification  
+lesson must include the exact sections `Interactive Lab`, `Practice Lab`,  
+`Shipped Artifact`, `Verify It`, and `Capstone Connection`; embed a registered  
+`figure` mechanism; ship at least one file under `outputs/`; and provide a  
+runnable scenario, simulator, scorer, or artifact validator with tests. Code in  
+a conceptual lesson must exercise the lesson's judgment. Do not add a fake API  
+integration merely to satisfy the runnable surface. Governance lessons can use  
+mock incidents, policy scorers, threat-model checks, ADR validation, approval  
 workflows, or evidence-bundle graders.
 
-`program.json` owns the independent-course disclaimer, verification date, and
-official links. `prerequisites.json` owns the machine-readable certification
-lesson dependency graph. Every required track route must contain those internal
-prerequisites before the lesson that consumes them. Each file in `tracks/` owns
-one public exam blueprint, its exact domain weights, ordered lesson route,
-assessment declarations, and study plans.
-Exam facts must come from the current official guide. Product and model details
+`program.json` owns the independent-course disclaimer, verification date, and  
+official links. `prerequisites.json` owns the machine-readable certification  
+lesson dependency graph. Every required track route must contain those internal  
+prerequisites before the lesson that consumes them. Each file in `tracks/` owns  
+one public exam blueprint, its exact domain weights, ordered lesson route,  
+assessment declarations, and study plans.  
+Exam facts must come from the current official guide. Product and model details  
 must be dated and checked against current official documentation.
 
-Diagnostics and mocks use a separate assessment schema because they support
+Diagnostics and mocks use a separate assessment schema because they support  
 multiple-response questions:
 
 ```json
@@ -171,35 +171,36 @@ multiple-response questions:
 }
 ```
 
-`correct` is always an array. A `single` item has exactly one index; a
-`multiple` item has at least two. Questions must be original, map to a public
-objective, include a substantive explanation, and never reproduce or attempt
-to reconstruct confidential exam content. Practice percentages are raw scores,
-not Anthropic scaled scores, and the curriculum never guarantees a pass.
-Public certification pages and lesson context must also state that this is an
-independent community curriculum that is not affiliated with, endorsed by,
+`correct` is always an array. A `single` item has exactly one index; a  
+`multiple` item has at least two. Questions must be original, map to a public  
+objective, include a substantive explanation, and never reproduce or attempt  
+to reconstruct confidential exam content. Practice percentages are raw scores,  
+not Anthropic scaled scores, and the curriculum never guarantees a pass.  
+Public certification pages and lesson context must also state that this is an  
+independent community curriculum that is not affiliated with, endorsed by,  
 sponsored by, or authorized by Anthropic.
 
 ### AI-native certification learner mode
 
-When a user asks to choose, start, resume, study, practice, or assess a Claude
-certification, read and follow `skills/claude-certification/SKILL.md` before
-teaching. This applies to Codex and any other harness that reads `AGENTS.md`;
+When a user asks to choose, start, resume, study, practice, or assess a Claude  
+certification, read and follow `skills/claude-certification/SKILL.md` before  
+teaching. This applies to Codex and any other harness that reads `AGENTS.md`;  
 Claude Code also discovers the matching wrapper under `.claude/skills/`.
 
-Treat the repository as an interactive tutor in learner mode. Read the selected
-track manifest, teach one route lesson at a time, run its real scenario and
-tests, require a learner-owned artifact under `learning-artifacts/`, grade the
-stored quiz or assessment, and preserve progress in
-`CLAUDE-CERTIFICATION.md`. Do not modify checked-in reference artifacts as
-learner work. The certification curriculum is delivered through GitHub and the
-website and is intentionally outside the book-generation pipeline.
-It remains English-only and is intentionally outside the machine-translation
+Treat the repository as an interactive tutor in learner mode. Read the selected  
+track manifest, teach one route lesson at a time, run its real scenario and  
+tests, require a learner-owned artifact under `learning-artifacts/`, grade the  
+stored quiz or assessment, and preserve progress in  
+`CLAUDE-CERTIFICATION.md`. Do not modify checked-in reference artifacts as  
+learner work. The certification curriculum is delivered through GitHub and the  
+website and is intentionally outside the book-generation pipeline.  
+It remains English-only and is intentionally outside the machine-translation  
 pipeline as well.
 
 ### Manual contract
 
 A manual under `manuals/<id>/` explains one subject at one pinned version, built from offline captures and ranked sources. Read `manuals/AUTHORING.md` before writing one. `node scripts/audit_manuals.js` must report `TOTAL 0`: it checks section shape, prose limits, figure legibility, listing provenance, verbatim quotes, and capture drift. Commit one section per commit as `feat(manual/<id>): <section slug>`. Manuals stay outside the book and translation pipelines; their PDFs are release assets, never committed.
+
 
 ### code/
 
@@ -232,9 +233,9 @@ python3 main.py && python3 -m unittest discover tests -v   # or the lang equival
 CI gates (`.github/workflows/curriculum.yml`):
 
 | Job                              | Trigger      | Behavior                                              |
-|----------------------------------|--------------|-------------------------------------------------------|
+| -------------------------------- | ------------ | ----------------------------------------------------- |
 | `audit`                          | push + PR    | Runs `audit_lessons.py`. Blocking.                    |
-| `readme-counts-sync` (main only) | push to main | Rebuilds catalog + auto-fixes README counts.         |
+| `readme-counts-sync` (main only) | push to main | Rebuilds catalog + auto-fixes README counts.          |
 | `site-rebuild` (main only)       | push to main | Re-runs `node site/build.js`, commits `site/data.js`. |
 | `readme-counts-drift`            | PR           | Advisory only — main self-heals on merge.             |
 
@@ -244,19 +245,19 @@ CI gates (`.github/workflows/curriculum.yml`):
 
 **CI handles automatically — do not touch in your PR:**
 
-| Surface              | Bot                            | When                |
-|----------------------|--------------------------------|---------------------|
-| `catalog.json`       | rebuilt on demand (gitignored) | every CI job        |
-| `README.md` counts   | `readme-counts-sync`           | on push to main     |
-| `site/data.js`       | `site-rebuild`                 | on push to main     |
+| Surface            | Bot                            | When            |
+| ------------------ | ------------------------------ | --------------- |
+| `catalog.json`     | rebuilt on demand (gitignored) | every CI job    |
+| `README.md` counts | `readme-counts-sync`           | on push to main |
+| `site/data.js`     | `site-rebuild`                 | on push to main |
 
 **You handle:**
 
-| Surface                       | When                                                             |
-|-------------------------------|------------------------------------------------------------------|
-| `README.md` lesson-link rows  | when adding a new lesson — link `[Title](phases/NN-phase/MM-lesson/)` |
-| `ROADMAP.md` status           | when marking a lesson complete or WIP                            |
-| `glossary/terms.md`           | when introducing a term used by more than one lesson             |
+| Surface                      | When                                                                  |
+| ---------------------------- | --------------------------------------------------------------------- |
+| `README.md` lesson-link rows | when adding a new lesson — link `[Title](phases/NN-phase/MM-lesson/)` |
+| `ROADMAP.md` status          | when marking a lesson complete or WIP                                 |
+| `glossary/terms.md`          | when introducing a term used by more than one lesson                  |
 
 **Common bug**: if `grep -c 'tree/main/phases/NN-' site/data.js` is 0 after merge, the Phase NN README rows are plain text and missing the `[Title](phases/NN-...)` markdown link. `site/build.js` derives the URL from that link.
 

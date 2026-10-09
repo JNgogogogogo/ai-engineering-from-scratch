@@ -4,6 +4,10 @@
 
 > 自 2026-10-09 起本文件一律用中文记录。路径表中的状态关键字（Do / Skip / Review / Done）保留英文，供学习技能校验使用。
 
+## 固定约定（记忆）
+
+1. **每次学习新一课之前，先把该课 `docs/en.md` 改成中文**：在同目录写 `docs/zh.md`，中文正文在前，英文原文以引用块（`>`）保留在对应段落下方；代码块、命令、`figure` 块、术语名一律保留英文不翻译；`en.md` 本体保持英文不动。（2026-10-09 起，学员指定）
+
 ## 使命
 转行进入 AI 工程，以最快速度冲刺，目标是在课程结束时亲手构建一个自主智能体。
 
@@ -49,7 +53,8 @@
 | 2026-10-09 | 0/02 | 3/3 | 学员连发三条冲突的"learn"消息；按最新的（0/02）执行。热身 2/2——正确回忆出 0/01 的 GPU 错题，复习项已销。挖出"git 只存差异"的经典误解；用内容寻址快照 + blob 去重，现场演示 scratch 仓库的分支/合并（fast-forward = 移动指针）予以纠正。"分支即指针"的题答对。测验 3/3 全对。 |
 | 2026-10-09 | 0/03 | 2/3 | 学员修改主线：Phase 0 由 Skip 改为 Do，按顺序推进。把 gpu_check.py 适配到 MPS（踩坑：macOS 的 os.sysconf 不认 "hw.memsize"，改用 sysctl 子进程修复）。用 uv 重建 .venv（学员在 0/01 后自己装了 uv）。基准测试的求实时刻：我对 4x 加速的"矩阵太小"假设被数据推翻（4000² 到 12000² 加速比稳定 4x），改讲 Apple AMX CPU ≈1.6 TFLOPS vs MPS fp32 ≈6 TFLOPS。nvidia-smi 题失分（选了不存在的 torch API）；fp16 法则测验中途补讲后答对 C。 |
 | 2026-10-09 | 0/04 | 1/3 | 首次 LLM API 调用成功：配好 .env（已被 .gitignore 覆盖）+ uv run --env-file 工作流，用 openai SDK 调 DeepSeek（OpenAI 兼容，base_url + model 两个字符串即可换厂商）。git 历史不可变题答对（密钥泄露后删文件不够，需改写历史+换钥匙）。测验 1/3：.env 存放答对；Anthropic 裸 HTTP 的 x-api-key 头答成 Bearer（正好与其 DeepSeek 调用用的 Bearer 对照，已讲厂商差异）；429 限流答成"自动排队"，补讲指数退避与 Retry-After。答题速度偏快，疑为未细读题干。 |
-| 2026-10-09 | 0/05 | 3/3 | Jupyter Notebooks，无新数学，纯工程手感。热身 2/2——Anthropic 的 x-api-key 这次答对，0/04 复习项销账。理解检查（跨 cell 变量存活）一次答对 12。用真实 kernel（jupyter_client 驱动，非模拟）复现三个陷阱：乱序执行、幽灵状态、内存泄漏；最触动的是幽灵状态——CELL4 一行未改，只因前面多跑了一个 cell 就从 NameError 变成 499,999。实测 %timeit 的必要性：同一段 np.random.randn(1000) 单次计时 8轮 =4.61/0.01/0.01…ms，差 582 倍，首次懒加载主导。测验 3/3 全对且Q2（乱序执行）答得很快，说明 kernel 概念已内化。产物：learning-artifacts/phase0/notebook_traps_demo.py。 |
+| 2026-10-09 | 0/05 | 3/3 | Jupyter Notebooks，无新数学，纯工程手感。热身 2/2——Anthropic 的 x-api-key 这次答对，0/04 复习项销账。理解检查（跨 cell 变量存活）一次答对 12。用真实 kernel（jupyter_client 驱动，非模拟）复现三个陷阱：乱序执行、幽灵状态、内存泄漏；最触动的是幽灵状态——CELL4 一行未改，只因前面多跑了一个 cell 就从 NameError 变成 499,999。实测 %timeit 的必要性：同一段 np.random.randn(1000) 单次计时 8轮 =4.61/0.01/0.01…ms，差582 倍，首次懒加载主导。测验 3/3 全对且Q2（乱序执行）答得很快，说明 kernel 概念已内化。产物：learning-artifacts/phase0/notebook_traps_demo.py。 |
+| 2026-10-09 | 0/06 | 3/3 | Python Environments。热身 2/2（0/05 的%timeit 与乱序执行都答对，且主动补出"setup 提到循环外"这个细节）。核心讲透三件事：① 虚拟环境不是 Python 特性而是**目录约定**，隔离的实现就是 pyvenv.cfg 里那行 `include-system-site-packages = false`；② activate 只做两件事——PATH 前面插入 + 导出 VIRTUAL_ENV，deactivate 就是把 PATH 字符串还原，没有"卸载"；③ 隔离判定看 sys.prefix != sys.base_prefix。实测建了两个真环境各装不同 numpy（1.26.4 vs 2.2.6）互不干扰，系统 Python 保持干净。发现本课程 .venv 是 uv 建的**没有 pip**，`python -m pip` 报 `No module named pip`（极具误导性的报错）。体积对比 69MB vs 297 字节 ≈ 24 万倍。测验 3/3 全对。产物：learning-artifacts/phase0/venv_isolation_lab.py。 |
 
 ## 复习队列
 - 1/03（矩阵变换与特征值）：未答出"A = V @ D @ V^-1 揭示了什么"——练习把特征值/特征向量对翻译成"沿 X 方向拉伸 k 倍"这类表述。
@@ -58,3 +63,4 @@
 - 0/03（GPU 设置与云）：系统级 vs 框架级 GPU 工具——`nvidia-smi` 是标准的硬件状态检查（不依赖 Python 也能跑）；`torch.cuda.list_devices()` 根本不存在。学员选了假 API；强化分层规则：查硬件状态用第 1 层系统工具，查框架可用性用第 4 层 API。已解决 2026-10-09：0/04 热身中回忆正确。
 - 0/04（API 与密钥）：① 认证头的厂商差异——OpenAI/DeepSeek 用 `Authorization: Bearer`，Anthropic 用 `x-api-key` + `anthropic-version`；裸 HTTP 调试时必须带对头。② 限流处理——超限返回 HTTP 429，不会自动排队；客户端须自己重试（指数退避 + 读 `Retry-After`）。Phase 13 起 agent 循环调用前必须掌握。
 - 0/05（Jupyter Notebook）：kernel 状态依赖这条铁律要保持住——**notebook 的正确性取决于点击顺序，不是文件里的顺序**。Phase 3 起每写一个训练 notebook 都养成两个习惯：① 每隔一段就 Restart & Run All；② 跑通的代码立刻挪进 `.py`，挪不动说明有幽灵状态。已解决 2026-10-09：0/04 的x-api-key 与 429 两项在0/05 热身中回忆正确。
+- 0/06（Python环境）：① **本课程 `.venv` 是 uv 建的，里面没有 pip**——跑 `python -m pip` 会报 `No module named pip`（误导性报错，不说工具用错）。用 `uv pip install` / `uv add`。② 判定自己在不在环境里看 `sys.prefix != sys.base_prefix`，或 `which python` 的路径，**不要看版本号**。③ 隔离的本质是 `pyvenv.cfg` 里 `include-system-site-packages = false` 这一行；`activate` 只改 PATH，`deactivate` 只是把 PATH 字符串还原。这些在 Phase 4 起多环境并行时会直接用到。
