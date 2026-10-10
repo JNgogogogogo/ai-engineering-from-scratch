@@ -63,8 +63,8 @@
 | Phase | 名称 | 状态 | 预计学时 |
 |-------|------|------|---------|
 | 0 | 环境配置与工具 | Do | 12 |
-| 1 | 数学基础 | Skip | -- |
-| 2 | 机器学习基础 | Review | 21 |
+| 1 | 数学基础 | Do | 12 |
+| 2 | 机器学习基础 | Do | 21 |
 | 3 | 深度学习核心 | Do | 15 |
 | 4 | 计算机视觉 | Do | 27 |
 | 5 | NLP — 从基础到进阶 | Do | 30 |
@@ -102,6 +102,7 @@
 | 2026-10-09 | 0/06 | 3/3 | Python Environments。热身 2/2（0/05 的%timeit 与乱序执行都答对，且主动补出"setup 提到循环外"这个细节）。核心讲透三件事：① 虚拟环境不是 Python 特性而是**目录约定**，隔离的实现就是 pyvenv.cfg 里那行 `include-system-site-packages = false`；② activate 只做两件事——PATH 前面插入 + 导出 VIRTUAL_ENV，deactivate 就是把 PATH 字符串还原，没有"卸载"；③ 隔离判定看 sys.prefix != sys.base_prefix。实测建了两个真环境各装不同 numpy（1.26.4 vs 2.2.6）互不干扰，系统 Python保持干净。发现本课程 .venv 是 uv 建的**没有 pip**，`python -m pip` 报 `No module named pip`（极具误导性的报错）。体积对比 69MB vs 297 字节 ≈ 24万倍。测验 3/3 全对。产物：learning-artifacts/phase0/venv_isolation_lab.py。 |
 | 2026-10-09 | 0/07 | 3/3 | Docker for AI。热身 2/2（0/06 的 uv 无pip 与 which python 都答对）。核心讲透：镜像分层与缓存失效范围（每条指令一层，改一层则其后全废）；四个反直觉但正确的写法（apt-get update 必须与 install 合并、pip 要 --no-cache-dir、--platform=linux/amd64 是给 Apple Silicon 的、get-pip.py 要带 sha256 校验）。实测数据：原版 13 层合计约 4360 MB（torch 层 2610 MB 最贵），改第 9 层只需重跑 250 MB，改第 7 层要 2860 MB——这就是"torch 装倒数第二层"的量化理由。给了 M5 Pro 的现实结论：Docker daemon 未运行、8.32 GB 上限跑不动 7GB CUDA 镜像、PyTorch cu124 wheel 只发 x86_64，Apple Silicon 上建议直接用 MPS 原生跑。测验 3/3 全对。产物：dockerfile_layer_analyzer.py + Dockerfile.macos-lite。 |
 | 2026-10-09 | 0/08 | 3/3 | Editor Setup。热身 2/2（0/07 的 apt-get update合并 与 Apple Silicon 平台约束都答对，且 Q2 正确选了"容器里依然没有 GPU"而非"改 CPU 版"这个陷阱项）。**本课修正了课程原文一处不准确**：课程说 typeCheckingMode: basic 能抓 tensor shape mismatch，实测抓不到——`x.reshape(x.size(1), x.size(0))` 零报错，但作者本意是转置。根本原因：shape 不在类型系统里，Tensor 注解对 (32,100) 还是 (100,32) 一无所知。实测能抓的是拼错参数名（SGD(learning_rate=) → TypeError）。顺带发现 pred.backward() 非标量时 PyTorch 自己会拦（grad can be implicitly created only for scalar outputs），那是运行时检查不是类型检查。**核心收获是两层防线：类型检查抓「接口用错」+ smoke test 抓「意图算错」**。测验 Q3 按课程答案选D 算对（选项本身不严谨，知识点已在讲义「实测纠正」一节）。产物：type_checking_demo.py。**流程违规**：本课漏写 zh.md就被大哥指出，根因是把约定挂成待办而非流程第一步，已在三处修正。 |
+| 2026-10-10 | 0/09 | 3/3 | Data Management。热身 2/2（typeCheckingMode 选 D 但只有半边成立——shape 抓不到，第三次强调；Remote SSH 销账）。课前把今早的纯中文 zh.md 升级成双语+实测（外部进程写的，增量补未覆盖）。实测驱动：Parquet 全列 10.5x / 单列 61x（投影下推，跳列越多领先越大）、冷启动 12.7ms vs warm 0.18ms 差 70x、压缩率同质 text 11x vs 各异 3.2x。**纠正课文 Step 5 划分代码切出 70/10/20**（文字写 80/10/10，正确版一直在 data_utils.make_splits 里——示例代码没和产物对拍）；纠正 Arrow「小」（save_to_disk 落盘 ≈CSV，赢在 mmap 读速 0.001s）；本地 from_csv/from_json 也写 HF 缓存（0→27MB）。HF 直连+hf-mirror 均 Connection refused，下载环节用合成数据顶上。预测题1（单列优势更大）答对方向但没来得及答就跳过，已用数据补讲。产物：learning-artifacts/phase0/data_formats_lab.py。测验 3/3。 |
 
 ## 复习队列
 - 1/03（矩阵变换与特征值）：未答出"A = V @ D @ V^-1 揭示了什么"——练习把特征值/特征向量对翻译成"沿 X 方向拉伸 k 倍"这类表述。
@@ -113,3 +114,4 @@
 - 0/06（Python环境）：① **本课程 `.venv` 是 uv 建的，里面没有 pip**——跑 `python -m pip` 会报 `No module named pip`（误导性报错，不说工具用错）。用 `uv pip install` / `uv add`。② 判定自己在不在环境里看 `sys.prefix != sys.base_prefix`，或 `which python` 的路径，**不要看版本号**。③ 隔离的本质是 `pyvenv.cfg` 里 `include-system-site-packages = false` 这一行；`activate` 只改 PATH，`deactivate` 只是把 PATH 字符串还原。这些在 Phase 4 起多环境并行时会直接用到。
 - 0/07（Docker）：① **Dockerfile 写法的四条硬规则**（Phase 11 起构建训练镜像会直接用到）：`apt-get update` 必须与 `install` 合并成一条 RUN（分开会让 install 命中过期索引）；每个 `pip install` 要 `--no-cache-dir`（否则 pip 缓存固化进镜像层，重建全重下）；变化最频繁的指令放最后（重建范围最小）；**绝不 `curl | bash`**，要下载 → sha256 校验 → 执行三步分开。② **Apple Silicon 的现实约束**：PyTorch `cu124` wheel 只发 x86_64，没有 arm64；Mac 上要么加 `--platform=linux/amd64` 走模拟（慢且无 GPU），要么用 CPU 版 wheel，要么直接用 MPS 原生跑。判据用 `dockerfile_layer_analyzer.py`。③ Compose 里**服务名即 DNS 主机名**（`http://qdrant:6333`），Compose 内建 DNS 自动解析——和 Nacos 服务发现同类问题，只是 DNS 由 Compose 提供。
 - 0/08（编辑器）：① **两层防线的分工**——类型检查（basic 模式）只抓「接口用错」：拼错参数名、参数类型传错、import 路径错、返回值不符声明；**抓不到「意图算错」：维度混淆、该mean 用了 sum、tensor 当 numpy 用**。后者才是 AI 工程真正会浪费几小时的。Phase 3 起每写一个训练模块，配一个 5 行 smoke test（断言关键张量 shape + loss 量级）。② `settings.json` 里对本项目最有用的几项：`"[python]"` 独立块（formatOnSave 只作用于 .py）、`editor.renderWhitespace: "trailing"`（只显行尾空格，Python 隐形 bug 克星）、`notebook.output.textLineLimit: 500`、`files.autoSaveDelay: 1000`、`search.exclude: "**/.venv": true`（跳过 1375 MB 的 .venv）。③ 本机 VS Code.app 已装但 `code` 命令未进 PATH；需要时 `/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code --install`。④ Remote SSH 是以后上GPU 服务器的主力，配好 `~/.ssh/config` 后 VS Code 里直接选主机名连上。
+- 0/09（数据管理）：① **划分算法**——要 x/y/z，先 `test_size=y+z` 切出尾部，再对尾部 `test_size=z/(y+z)` 切开；80/10/10 是对半分那 20%，70/15/15 是对半分那 30%。**教训：课文示例代码必须与产物对拍**（Step 5 内联代码 70/10/20 vs make_splits 80/10/10）。② 量化记忆列式优势：单列 61x / 全列 10.5x——**跳过的列越多优势越大**；`usecols` 省解析不省 I/O。③ 任何 benchmark 先 warm（冷启动 70x 假象，0/05 铁律）。④ 本地 `Dataset.from_*` 也写 `~/.cache/huggingface/datasets/` 缓存，磁盘账要算。⑤ test 集是高考只考一次，调参用 val；seed 是实验坐标系，不设 seed 两次划分必不同。

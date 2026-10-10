@@ -117,6 +117,34 @@ Read `LEARNING.md` from the current directory.
   offer two options — run it now, or start immediately at Phase 1, Lesson 1
   without a plan. Never block the lesson on setup.
 
+## Step 0.5 — Translate first (mandatory, before any question)
+
+Before the warm-up recall — before ANY question is asked — read the lesson's
+`docs/en.md` and write `docs/zh.md` next to it. Self-check: `docs/zh.md` must
+exist before the first question goes out. Asking first and translating later
+violates this step (the lesson is then left half-done when the session is
+interrupted).
+
+Format contract for `docs/zh.md`:
+
+- Chinese prose first, as the body; the English source text kept as a
+  blockquote (`>`) directly BELOW its matching Chinese paragraph.
+- Code blocks, shell commands, `figure` blocks, and technical terms stay in
+  English untranslated (kernel / cell / layer / token); a Chinese gloss may be
+  added on first occurrence.
+- Never modify `en.md` itself.
+- Bilingual side-by-side is the preferred form.
+
+Teaching notes rule: `docs/zh.md` is not just a translation — include
+measured data and a「实测纠正」(measured correction) section whenever hands-on
+runs contradict the lesson text. Writing only a translation without the
+hands-on evidence is incomplete.
+
+If `docs/zh.md` already exists for the lesson (e.g. another session wrote
+it), verify it against this contract and skip regeneration — do not redo
+work. Where the repo also keeps long-term rules (`.workbuddy/memory/MEMORY.md`,
+`LEARNING.md` 固定约定), keep this step consistent with them.
+
 ## Step 1 — Warm-up recall (only if a previous lesson is logged)
 
 Before new material, ask 2 questions from the **previous** lesson's quiz,
