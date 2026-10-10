@@ -1,0 +1,72 @@
+# Docker for AI — Apple Silicon 精简版
+#
+# 用途：在 M系列 Mac（arm64，无 NVIDIA GPU）上跑通Docker 的完整流程，
+#       验证 Dockerfile / volume / Compose 这些机制，而不是练GPU 训练。
+#
+# 与课程原版的关键差异：
+#   1. 基础镜像用 python:3.12-slim（~150 MB）而非 nvidia/cuda:devel（~4 GB）
+#   2. 不装 CUDA、不装 GPU 版 torch —— 原版的 cu124 wheel 只发 x86_64，
+#      在 arm64 上会报 No matching distribution found
+#   3. 装 CPU 版 torch，体积从 ~2.6 GB 降到 ~200 MB
+#   4. 保留层缓存规则与供应链安全实践（合并 RUN / --no-cache-dir / sha256 校验）
+#
+# 代价：这里跑不了 CUDA 代码。要练真 GPU，请把课程原版 Dockerfile
+#       用在 x86_64 Linux + NVIDIA GPU 的服务器上。
+#
+# 构建：
+#   docker build -t ai-dev-lite -f learning-artifacts/phase0/Dockerfile.macos-lite .
+# 验证隔离：
+#   docker run --rm ai-dev-lite python -c "import sys; print(sys.prefix != sys.base_prefix)"
+# 跑 Jupyter（注意去掉 --gpus all）：
+#   docker run --rm -it -p 8888:8888 -v $(pwd):/workspace \
+#       ai-dev-lite jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+
+# --- 不用 nvidia/cuda：arm64 上没有 CUDA，且 wheel 不全--------------
+FROM python:3.12-slim
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# 规则①：update 与 install 合并成一条 RUN，否则 install 层会命中过期索引
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        curl \
+        build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- pip：规则② 用 PIP_NO_CACHE_DIR 全局关缓存，避免缓存固化进某一层 ----
+# 规则④ 下载 → 校验哈希 → 执行，三步分开。绝不 `curl | bash`
+RUN curl -sSL https://raw.githubusercontent.com/pypa/get-pip/3b73145063be545b649ad9ca83ea8da5fc915a4f/public/get-pip.py -o /tmp/get-pip.py \
+    && echo "a341e1a43e38001c551a1508a73ff23636a11970b61d901d9a1cad2a18f57055  /tmp/get-pip.py" | sha256sum -c - \
+    && python /tmp/get-pip.py \
+    && rm /tmp/get-pip.py
+
+RUN python -m pip install --upgrade pip setuptools wheel
+
+# --- CPU 版 torch（arm64 有官方 wheel）------------------------------
+# 规则：版本全钉死，保证镜像可复现
+RUN python -m pip install \
+        torch==2.6.0 \
+        torchvision==0.21.0 \
+    --index-url https://download.pytorch.org/whl/cpu
+
+RUN python -m pip install \
+        numpy==2.2.6 \
+        pandas==2.2.3 \
+        scikit-learn==1.5.2 \
+        matplotlib==3.9.4 \
+        jupyterlab==4.6.4 \
+        transformers==4.46.3 \
+        datasets==3.1.0 \
+        accelerate==1.1.1 \
+        safetensors==0.4.5
+
+WORKDIR /workspace
+
+VOLUME ["/workspace", "/models"]
+
+EXPOSE 8888
+
+CMD ["python"]
