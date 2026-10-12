@@ -110,7 +110,7 @@ def gradient_descent_nd(f, x0, lr=0.1, steps=100):
 
 def demo_numerical_vs_analytical():
     print("=" * 55)
-    print("NUMERICAL vs ANALYTICAL DERIVATIVES")
+    print("数值导数 vs 解析导数")
     print("=" * 55)
 
     # (名字, 原函数, 它的解析导数) —— 前两个是 lambda，后三个用 math
@@ -123,8 +123,8 @@ def demo_numerical_vs_analytical():
     ]
 
     x = 2.0
-    print(f"\nAt x = {x}:")
-    print(f"{'Function':<12} {'Numerical':>12} {'Analytical':>12} {'Error':>12}")
+    print(f"\n在 x = {x} 处：")
+    print(f"{'函数':<12} {'数值导数':>12} {'解析导数':>12} {'误差':>12}")
     print("-" * 50)
     for name, f, df in test_cases:
         num = numerical_derivative(f, x)   # 数值法（有微小误差）
@@ -141,7 +141,7 @@ def demo_numerical_vs_analytical():
 
 def demo_gradient():
     print("\n" + "=" * 55)
-    print("GRADIENT (VECTOR OF PARTIAL DERIVATIVES)")
+    print("梯度（所有偏导组成的向量）")
     print("=" * 55)
 
     def f(point):
@@ -154,11 +154,11 @@ def demo_gradient():
     analytical = [2*point[0] + 3*point[1], 3*point[0] + 2*point[1]]
 
     print(f"\nf(x,y) = x^2 + 3xy + y^2")
-    print(f"At point ({point[0]}, {point[1]}):")
+    print(f"在点 ({point[0]}, {point[1]}) 处：")
     # 实测：[8.0000, 7.0000] 对 [8.0, 7.0] —— 数值法在两位小数上完全一致。
     # 这就是"反向传播写完后用数值梯度做 gradient check"的原理。
-    print(f"  Numerical gradient:  [{grad[0]:.4f}, {grad[1]:.4f}]")
-    print(f"  Analytical gradient: [{analytical[0]:.1f}, {analytical[1]:.1f}]")
+    print(f"  数值梯度:   [{grad[0]:.4f}, {grad[1]:.4f}]")
+    print(f"  解析梯度:   [{analytical[0]:.1f}, {analytical[1]:.1f}]")
 
 
 # ==========================================================================
@@ -167,17 +167,17 @@ def demo_gradient():
 
 def demo_gradient_descent_1d():
     print("\n" + "=" * 55)
-    print("GRADIENT DESCENT: f(x) = x^2")
+    print("梯度下降: f(x) = x^2")
     print("=" * 55)
 
     x = 5.0
     lr = 0.1
-    print(f"\nStart: x={x}, lr={lr}")
+    print(f"\n起点: x={x}, lr={lr}")
     for step in range(20):
         grad = 2 * x                   # f(x)=x^2 的导数是 2x
         x = x - lr * grad              # 更新规则
         if step % 4 == 0 or step == 19:
-            print(f"  step {step:2d}  x={x:8.4f}  f(x)={x**2:10.6f}")
+            print(f"  第 {step:2d} 步  x={x:8.4f}  f(x)={x**2:10.6f}")
 
     # 【实测宝藏】把更新式代入化简：
     #     x_new = x - lr*(2x) = (1 - 2*lr) * x
@@ -188,7 +188,7 @@ def demo_gradient_descent_1d():
     #     lr=1.0 -> 系数 -1  永久震荡不收敛
     #     lr=1.1 -> 系数 -1.2 发散
     # 一般函数上，学习率的上限由"曲率（二阶导）"决定。
-    print(f"Minimum found at x={x:.6f} (true minimum: x=0)")
+    print(f"找到最小值于 x={x:.6f}（真实最小值: x=0）")
 
 
 # ==========================================================================
@@ -197,7 +197,7 @@ def demo_gradient_descent_1d():
 
 def demo_gradient_descent_2d():
     print("\n" + "=" * 55)
-    print("GRADIENT DESCENT: f(x,y) = x^2 + y^2")
+    print("梯度下降: f(x,y) = x^2 + y^2")
     print("=" * 55)
 
     def f(point):
@@ -206,20 +206,20 @@ def demo_gradient_descent_2d():
 
     point = [4.0, 3.0]
     lr = 0.1
-    print(f"\nStart: ({point[0]}, {point[1]}), lr={lr}")
+    print(f"\n起点: ({point[0]}, {point[1]}), lr={lr}")
     for step in range(30):
         grad = numerical_gradient(f, point)          # 每次都用数值梯度
         # 逐分量更新：x 和 y 各自减去 lr * 自己的偏导
         point = [p - lr * g for p, g in zip(point, grad)]
         loss = f(point)
         if step % 5 == 0 or step == 29:
-            print(f"  step {step:2d}  ({point[0]:7.4f}, {point[1]:7.4f})  f={loss:.6f}")
+            print(f"  第 {step:2d} 步  ({point[0]:7.4f}, {point[1]:7.4f})  f={loss:.6f}")
 
     # 起点 (4,3) 到原点的距离是 5，f=x^2+y^2 两个方向"一样陡"，
     # 所以它本质上和 1D 那个 5*0.8^n 是同一件事：
     #     5 * 0.8^30 = 0.0062，实测模长 sqrt(0.0050^2+0.0037^2) = 0.0062 ✓
     # 但"各向异性"的坑（Rosenbrock）在演示 5 才会出现。
-    print(f"Minimum found at ({point[0]:.4f}, {point[1]:.4f}) (true: (0, 0))")
+    print(f"找到最小值于 ({point[0]:.4f}, {point[1]:.4f})（真实: (0, 0)）")
 
 
 # ==========================================================================
@@ -298,7 +298,7 @@ def hessian_eigenvalues(H):
 
 def demo_hessian():
     print("\n" + "=" * 55)
-    print("HESSIAN MATRIX: SADDLE POINT vs MINIMUM")
+    print("Hessian 矩阵: 鞍点 vs 最小值")
     print("=" * 55)
 
     def saddle(x, y):
@@ -309,25 +309,25 @@ def demo_hessian():
         # 碗函数：两个方向都朝上弯
         return x ** 2 + y ** 2
 
-    print("\nf(x,y) = x^2 - y^2 (saddle function)")
+    print("\nf(x,y) = x^2 - y^2（鞍点函数）")
     H = hessian_2d(saddle, 0.0, 0.0)
     e1, e2 = hessian_eigenvalues(H)
-    print("  Hessian at (0,0):")
+    print("  在 (0,0) 处的 Hessian:")
     print(f"    [{H[0][0]:6.2f}  {H[0][1]:6.2f}]")
     print(f"    [{H[1][0]:6.2f}  {H[1][1]:6.2f}]")
     # 期望：[[2, 0], [0, -2]]，特征值 2 和 -2（一正一负）=> 鞍点
-    print(f"  Eigenvalues: {e1:.2f}, {e2:.2f}")
-    print("  Mixed signs --> SADDLE POINT")
+    print(f"  特征值: {e1:.2f}, {e2:.2f}")
+    print("  符号混杂 --> 鞍点")
 
-    print("\nf(x,y) = x^2 + y^2 (bowl function)")
+    print("\nf(x,y) = x^2 + y^2（碗函数）")
     H = hessian_2d(bowl, 0.0, 0.0)
     e1, e2 = hessian_eigenvalues(H)
-    print("  Hessian at (0,0):")
+    print("  在 (0,0) 处的 Hessian:")
     print(f"    [{H[0][0]:6.2f}  {H[0][1]:6.2f}]")
     print(f"    [{H[1][0]:6.2f}  {H[1][1]:6.2f}]")
     # 期望：[[2, 0], [0, 2]]，特征值 2 和 2（都是正的）=> 局部最小值
-    print(f"  Eigenvalues: {e1:.2f}, {e2:.2f}")
-    print("  Both positive --> LOCAL MINIMUM")
+    print(f"  特征值: {e1:.2f}, {e2:.2f}")
+    print("  全部为正 --> 局部最小值")
 
     def rosenbrock(x, y):
         # Rosenbrock"香蕉函数"：全局最小在 (1,1)，但那条山谷窄而长
@@ -337,16 +337,16 @@ def demo_hessian():
     print("\nRosenbrock f(x,y) = (1-x)^2 + 100*(y-x^2)^2")
     H = hessian_2d(rosenbrock, 1.0, 1.0)
     e1, e2 = hessian_eigenvalues(H)
-    print(f"  Hessian at minimum (1,1):")
+    print(f"  在最小值 (1,1) 处的 Hessian:")
     print(f"    [{H[0][0]:8.2f}  {H[0][1]:8.2f}]")
     print(f"    [{H[1][0]:8.2f}  {H[1][1]:8.2f}]")
-    print(f"  Eigenvalues: {e1:.2f}, {e2:.2f}")
+    print(f"  特征值: {e1:.2f}, {e2:.2f}")
     # 【实测宝藏】H = [[802, -400], [-400, 200]]，λ = 1001.60 和 0.40
     #   条件数 = 1001.60 / 0.40 ≈ 2504 —— 两个方向曲率相差 2500 倍！
     #   后果：陡方向要求极小学习率（否则飞出山谷），平方向爬得极慢，
     #        而平方向恰恰是通往最小值的唯一通道。
     #   这正是 Adam / L-BFGS / 牛顿法存在的理由。
-    print(f"  Both positive --> LOCAL MINIMUM (confirmed)")
+    print(f"  全部为正 --> 局部最小值（已确认）")
 
 
 # ==========================================================================
@@ -355,12 +355,12 @@ def demo_hessian():
 
 def demo_taylor():
     print("\n" + "=" * 55)
-    print("TAYLOR SERIES APPROXIMATION")
+    print("泰勒级数近似")
     print("=" * 55)
 
     x0 = 1.0
-    print(f"\nApproximating f(x) = e^x near x0 = {x0}")
-    print(f"{'h':>8}  {'True f(x0+h)':>14}  {'Order 0':>10}  {'Order 1':>10}  {'Order 2':>10}")
+    print(f"\n在 x0 = {x0} 附近近似 f(x) = e^x")
+    print(f"{'h':>8}  {'真值 f(x0+h)':>14}  {'0 阶':>10}  {'1 阶':>10}  {'2 阶':>10}")
     print("-" * 60)
 
     # e^x 的特点：各阶导数都是 e^x，所以 f、f'、f'' 传同一个函数
@@ -373,8 +373,8 @@ def demo_taylor():
         #      h=2.0 时二阶近似 13.59 对真值 20.09（低 32%，完全崩掉）
         print(f"{h:8.1f}  {true_val:14.6f}  {t0:10.6f}  {t1:10.6f}  {t2:10.6f}")
 
-    print(f"\nApproximating f(x) = sin(x) near x0 = 0")
-    print(f"{'h':>8}  {'True sin(h)':>14}  {'Order 0':>10}  {'Order 1':>10}  {'Order 2':>10}")
+    print(f"\n在 x0 = 0 附近近似 f(x) = sin(x)")
+    print(f"{'h':>8}  {'真值 sin(h)':>14}  {'0 阶':>10}  {'1 阶':>10}  {'2 阶':>10}")
     print("-" * 60)
 
     # sin 的各阶导数：f = sin, f' = cos, f'' = -sin
@@ -389,8 +389,8 @@ def demo_taylor():
         #   另外 h=2.0 时近似给出 2.0，真值 0.909 —— 差 2.2 倍，比直接猜 0 还离谱。
         print(f"{h:8.1f}  {true_val:14.6f}  {t0:10.6f}  {t1:10.6f}  {t2:10.6f}")
 
-    print("\nKey insight: more terms = better approximation near x0,")
-    print("but all Taylor approximations diverge far from x0.")
+    print("\n关键洞察: 项数越多，在 x0 附近近似越准，")
+    print("但所有泰勒近似在远离 x0 时都会发散。")
 
 
 # ==========================================================================
@@ -399,7 +399,7 @@ def demo_taylor():
 
 def demo_linear_regression():
     print("\n" + "=" * 55)
-    print("GRADIENT DESCENT: LINEAR REGRESSION y = 2x + 1")
+    print("梯度下降: 线性回归 y = 2x + 1")
     print("=" * 55)
 
     random.seed(42)                 # 固定随机种子，让结果可复现
@@ -432,15 +432,15 @@ def demo_linear_regression():
         w -= lr * dw
         b -= lr * db
         if epoch % 40 == 0 or epoch == 199:
-            print(f"  epoch {epoch:3d}  w={w:.4f}  b={b:.4f}  loss={total_loss:.6f}")
+            print(f"  第 {epoch:3d} 轮  w={w:.4f}  b={b:.4f}  loss={total_loss:.6f}")
 
     # 【实测宝藏】w 在 40 epoch 就到 2.13（目标 2.0），b 到 200 epoch 才 0.73（目标 1.0）
     #   根因：xs 平均值是 3，所以 dw 的量级约是 db 的 3 倍
     #        => 同一个学习率不可能同时适合两个尺度差 3 倍的参数
     #   这解释了三个常见做法：特征归一化、Adam（每参数自适应学习率）、学习率预热/衰减
     #   也解释了"loss 曲线平了但模型没学对"的一种可观测来源。
-    print(f"\nLearned: y = {w:.2f}x + {b:.2f}")
-    print(f"Actual:  y = 2.00x + 1.00")
+    print(f"\n学到的: y = {w:.2f}x + {b:.2f}")
+    print(f"真实的:  y = 2.00x + 1.00")
 
 
 if __name__ == "__main__":
