@@ -182,11 +182,38 @@ artifact. Teach it in that order, interactively:
 
 ## Step 3 — Quiz
 
+### Question delivery format（题目交付格式，2026-10-10 学员指定）
+
+**Quiz questions MUST be delivered as interactive `dsh-ui` radio components, NOT plain markdown text.** Use one `radio` per question with `group` (unique id like `q1`/`q2`/`q3`), `answer` (correct index), and `explanation` (per-question feedback). Place one `submit` at the end with `groups` listing all question ids so the learner clicks 交卷 and gets the score **instantly in the UI** (local grading, zero round-trip). This applies to:
+
+- Step 3 quiz (post-stage questions)
+- Step 1 warm-up recall (any multiple-choice question)
+- Inline 理解检查 / comprehension checks (single questions can also use `quiz` component)
+
+Schema pattern (one radio per question + one submit):
+
+```json
+{"items":[
+  {"type":"text","size":"h3","content":"<lesson title> · 测验"},
+  {"type":"radio","label":"Q1. ...","options":["...","...","...","..."],"group":"q1","answer":1,"explanation":"..."},
+  {"type":"radio","label":"Q2. ...","options":["...","...","...","..."],"group":"q2","answer":0,"explanation":"..."},
+  {"type":"submit","label":"交卷","groups":["q1","q2"],"resetAction":"redo"}
+]}
+```
+
+**Do NOT expose the answer index, answer letter, or correct-answer hints in the question text or label before the learner submits.** The `explanation` field is only shown after grading.
+
+If the host does not support `dsh-ui` (e.g. a plain terminal), fall back to the lettered-options text format below and ask one question at a time.
+
+### Grading and explanation
+
 Fetch `quiz.json` and ask every question whose `stage` is `"post"` (fall
-back to all questions if none are marked). One at a time, lettered options,
-no hints. After each answer, give the verdict and the explanation from the
-file. Do not expose `correct`, the answer index, or a literal answer-letter
-example before the learner responds. Report the score as `N/M`.
+back to all questions if none are marked). With `dsh-ui`, put all post-stage
+questions in ONE `radio` group block and one `submit`. Without `dsh-ui`, use
+one at a time, lettered options, no hints. After each answer, give the
+verdict and the explanation from the file. Do not expose `correct`, the
+answer index, or a literal answer-letter example before the learner responds.
+Report the score as `N/M`.
 
 ## Step 4 — Record
 
