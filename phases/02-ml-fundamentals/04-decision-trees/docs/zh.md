@@ -499,6 +499,94 @@ print(f"Feature importances: {rf.feature_importances_}")
 
 > With scikit-learn, training a random forest is three lines. ... In practice, gradient boosted trees (XGBoost, LightGBM, CatBoost) are often stronger than random forests because they build trees sequentially, with each tree correcting the errors of the previous ones. But random forests are harder to misconfigure and require almost no hyperparameter tuning.
 
+### 实测（2026-10-14 本机真跑）
+
+> 以下数据由 `.venv/bin/python code/trees.py` 实跑得到（EXIT=0），并与公式手工验算对拍。
+
+**实测 1 · Gini vs Entropy 数值表**
+
+| 分布 | Gini | Entropy |
+|---|---|---|
+| Pure node [A,A,A,A] | 0.0000 | −0.0000 |
+| Balanced [A,A,B,B] | 0.5000 | 1.0000 |
+| Imbalanced [A,A,A,B] | 0.3750 | 0.8113 |
+| Three classes [A,A,B,C] | 0.6250 | 1.5000 |
+| Uniform 4-class | 0.7500 | 2.0000 |
+
+手工验算 [A,A,A,B]：Gini = 1 − (0.75² + 0.25²) = 1 − 0.625 = **0.375** ✓；Entropy = −(0.75·log₂0.75 + 0.25·log₂0.25) = **0.8113** ✓。二者判据一致：纯节点 = 0，均衡 = 最大值（二类 0.5/1.0，四类 0.75/2.0）。注意纯节点 Entropy 打印 **−0.0000（负零）**——与 1/02 的 A@A⁻¹ 负零同一个坑，判等要用 `allclose`。
+
+**实测 2 · 信息增益手工验算（10 样本：4 cat / 3 dog / 3 bird）**
+
+Parent Gini = 1 − (0.16+0.09+0.09) = **0.66** ✓，Parent Entropy = **1.5710** ✓。
+
+| 分裂 | IG(Gini) | IG(Entropy) |
+|---|---|---|
+| Feature A: [cat,cat,cat,dog] \| [cat,dog,dog,bird,bird,bird] | 0.1433 | 0.3710 |
+| Feature B: [cat,cat,cat,cat] \| [dog,dog,dog,bird,bird,bird] | **0.3600** | **0.9710** |
+| Feature C: [cat,cat,dog,bird] \| [cat,cat,dog,dog,bird,bird] | 0.0100 | 0.0200 |
+
+Feature B 验算：左子纯（Gini 0），右子 1−(0.25+0.25)=0.5，加权 = 0.6×0.5 = 0.3，IG = 0.66 − 0.3 = **0.36** ✓；Entropy 同法 1.571 − 0.6 = **0.971** ✓。Feature C 两侧几乎一样杂，IG≈0.01——**没分开的分裂等于白切**。
+
+**实测 3 · 深度扫描：欠拟合 → 过拟合**（200 样本 3 类，train 160 / test 40）
+
+| Max Depth | Train Acc | Test Acc |
+|---|---|---|
+| 1 | 0.5312 | 0.4750 |
+| 2 | 0.6750 | 0.6250 |
+| 3 | 0.8438 | **0.8250** |
+| 5 | 0.9563 | 0.8250 |
+| 10 | 1.0000 | 0.8500 |
+| None | 1.0000 | 0.8500 |
+
+训练集 1.0 而测试集 0.85 的差距就是过拟合的形状。max_depth=3 的树结构可完整打印（根分裂 Feature 0 <= −1.1527）——**树的可解释性就是这种"能逐句读出来"**。
+
+**实测 4 · Gini vs Entropy 几乎不分家**：depth=3 → 0.8250 vs 0.8000（差 0.025）；depth=5 → 0.8250 vs 0.8500；depth=10 → 0.8500 vs 0.9000。实测与课文结论一致：二者给出几乎相同的树，Gini 略快（省 log 计算）。
+
+**实测 5 · 森林规模扫描**（300 样本，train 240 / test 60）+ **纠正**
+
+| N Trees | Train Acc | Test Acc |
+|---|---|---|
+| 1 | 0.9292 | 0.8667 |
+| 3 | 0.9042 | 0.8333 |
+| 5 | 0.9458 | 0.9500 |
+| 10 | 0.9625 | 0.9500 |
+| 25 | 0.9708 | 0.9333 |
+| 50 | 0.9708 | **0.8833** |
+| 100 | 0.9708 | 0.9500 |
+
+**纠正**：课文写 "Test accuracy plateaus but does not decrease"，但本实测 25 → 50 棵时从 0.9333 掉到 0.8833。原因：测试集只有 60 个样本，1 个样本 = 1.67% 准确率，抖动完全正常。**趋势论断（"只升不降"）在小测试集上不要轻信**——同 1/06「20 样本不下结论」的教训。
+
+**实测 6 · MDI 特征重要性**（目标 = feature_0 + feature_1 > 0；特征 2/3 是纯噪声）
+
+| Feature | Importance |
+|---|---|
+| important_2 | 0.4807 |
+| important_1 | 0.4348 |
+| noise_2 | 0.0491 |
+| noise_1 | 0.0354 |
+
+森林正确指认了重要特征；但注意**噪声特征仍拿到 0.05/0.035 的非零重要性**——正是 MDI 偏置 + 重要性在相关特征间分摊的现场证据。
+
+**实测 7 · 回归树 = 分段常数**（y = sin(x)·x + noise，train 160 / test 40）
+
+| Max Depth | Train MSE | Test MSE |
+|---|---|---|
+| 1 | 0.3259 | 0.3543 |
+| 3 | 0.0681 | **0.0709** |
+| 5 | 0.0293 | 0.0433 |
+| 10 | **0.0031** | **0.0599** |
+
+depth=10 训练 MSE 0.0031（几乎完美）而测试 0.0599 **反而变差**——标准过拟合签名。Random Forest（50 棵 depth=5）测试 MSE **0.0410**，比任何单树都低——平均分段常数把台阶抹成了缓坡。
+
+**实测 8 · 稳定性实验的实测纠正**（5 个略不同的数据子集）
+
+- 5 棵单树：0.975 / 0.925 / 0.925 / 0.925 / 0.950 → mean **0.9400**，std **0.0200**
+- 5 个森林：0.975 / 0.950 / 0.950 / 1.000 / 0.950 → mean **0.9650**，std **0.0200**
+
+**纠正**：课文结论 "Forests are more stable (lower variance)" 在本次实验里**没有体现**——两组 std 精确相等（0.0200），森林赢的是**均值**（0.965 vs 0.940）和整体区间上移（0.925–0.975 vs 0.950–1.000），不是稳定性。n=5 的实验太小，证明不了方差论断（1/06 教训重现）；理论上森林降方差成立，但要实证需要几十次重复实验。
+
+**实测 9 · 代码事实**：森林每棵树 bootstrap 重采样（`RandomForest.fit`，trees.py:237-246）；分裂时只随机抽 `max_features="sqrt"` 个特征候选（trees.py:158-160，RF 默认值 trees.py:227）。**两层随机 = bagging（样本随机）+ 特征随机**——去任何一层，树都会扎堆选同一个强特征，平均就失效了。
+
 ## Ship It · 交付
 
 本课产出 `outputs/prompt-tree-interpreter.md` —— 一个为业务相关方解读决策树分裂的提示词。把训练好的树的结构（深度、特征、分裂阈值、准确率）喂给它，它会把模型翻译成大白话规则、给特征重要性排序、标记过拟合或数据泄漏，并推荐下一步。任何需要向不读代码的人解释树模型的时候，都可以用它。

@@ -538,6 +538,26 @@ print(f"\nClassification Report:\n{classification_report(y_te, y_pred)}")
 
 > Now the same thing with scikit-learn. ... Your from-scratch implementation produces the same decision boundary and metrics. Scikit-learn adds solver options (liblinear, lbfgs, saga), automatic regularization, multi-class strategies (one-vs-rest, multinomial), and numerical stability optimizations.
 
+### 实测（2026-10-14 本机真跑）
+
+> Measured on this machine on 2026-10-14. All figures reproducible by running `code/logistic_regression.py` (exit 0) plus small verification scripts.
+
+1. **全量复现**：二分类 200 样本（两类中心 (2,2) / (5,5)，`np.random.seed(42)`）：损失 0.6289 → 0.1462（800 epoch），`w=[0.9886, 0.7629]`，`b=-5.9623`，训练准确率 0.9875、测试 1.0000，混淆矩阵 `[[21,0],[0,19]]`，precision / recall / F1 全 1.0。多分类 softmax 3 类：损失 1.0986 → 0.0709，训练 0.9917、测试 1.0000。
+
+2. **决策边界换算验算**：`0.9886·x1 + 0.7629·x2 − 5.9623 = 0` ⇒ `x2 = −1.2958·x1 + 7.8153`（代码打印 7.8152，纯舍入差）。边界点 (3.5, 3.5) 处 `z = 0.168`、`p = 0.5419`，与代码打印逐位一致。**判边界看 z 不看坐标**：z=0 ⟺ p=0.5 才是那条线。
+
+3. **损失初值的密码（打印时机差一拍）**：softmax 3 分类 Epoch 0 损失 = 1.0986 = ln 3 —— 零初始化时每类概率恰 1/3，每样本损失 −ln(1/3)。但二分类 Epoch 0 = 0.6289 ≠ ln 2 = 0.6931，差别不在数学在**打印顺序**：二分类的 fit 先更新再算损失（`logistic_regression.py:71-77`），多分类先算损失再更新（`logistic_regression.py:204-211`）。所以二分类的「Epoch 0」其实是第 1 步更新**之后**的损失。**教训同 2/02：对拍日志前先搞清打印时机。**
+
+4. **BCE 梯度恒等式 `dL/dz = p − y` 数值验证**：z=0.7、y=1 时 p=0.6637，中心差分数值梯度 −0.331812 = p−y 逐位相同；y=0 时 0.668188 = p−y。正因为这个恒等式，逻辑回归的更新规则看起来和线性回归一模一样（`error = p - y[i]`，`logistic_regression.py:67`）——**只是把 ŷ 换成了 σ(z)**。
+
+5. **损失数字 = 置信度（1/06 的老朋友）**：BCE = −log P(正确类)，Epoch 200 的 loss 0.3136 ⟺ P(正确类) = e^−0.3136 = 0.7308。训练过程就是把握度从 0.5 涨到 0.9+ 的过程。
+
+6. **阈值调节真数**：threshold 0.3 时 precision = 21/23 = 0.9130、recall 1.0（用 2 个 FP 换 0 个 FN）；0.4–0.5 是平台（全 1.0）；0.7 时 recall 掉到 0.9048。**precision / recall 的交换就是移动那条线**，不是抽象概念。
+
+7. **线性回归失败的量化**：线性拟合 `y = 0.1455x − 0.2` 在 x=1 给 −0.055、x=10 给 1.255 —— 两个数都在 [0,1] **之外**，不是「差一点」而是根本不是概率；sigmoid 把同样的十个点压进 [0.000, 1.000]。
+
+8. **sklearn 对拍**：同一测试集（support 21/19），混淆矩阵 `[[21,0],[0,19]]` 与从零版一致，accuracy 1.0000。但与 2/02 同款局限：**代码只打印指标不打印系数**（`coef_` / `intercept_` 未打印），课文「同样的决策边界」这句话在本课代码里仍未对拍过。
+
 ## Ship It · 交付
 
 本课产出：

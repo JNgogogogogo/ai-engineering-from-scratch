@@ -539,6 +539,169 @@ print(f"Ridge coefficient: {ridge.coef_[0]:.4f}")
 
 > Now the same thing with scikit-learn, which is what you will actually use in production. ... Your from-scratch implementation and scikit-learn produce the same results. The difference: scikit-learn handles edge cases, numerical stability, and performance optimizations. Use the library for production. Use the from-scratch version to understand what is happening.
 
+## 实测纠正 · Measured Corrections
+
+以下数据全部在本机实跑 `code/linear_regression.py`（Python 3.12，零依赖，exit 0）后自建脚本复测。发现课文有三处需要纠正。
+
+### 纠正 1：课文的 Use It 代码块「Sklearn 对比」根本不会打印任何系数
+
+`code/linear_regression.py` 末尾的 `Scikit-learn Comparison` 段在本机输出：
+
+```text
+=== Scikit-learn Comparison ===
+scikit-learn not installed. Install with: pip install scikit-learn
+The from-scratch implementations above work without any dependencies.
+```
+
+本项目 `.venv` 未装 scikit-learn（依赖清单里 Python 只允许 numpy / torch / h5py / zstandard / safetensors）。但即使装上，**本课产物文件里的 Sklearn 代码只打印 R^2，从不打印系数**——而课文正文断言「你从零写的实现和 scikit-learn 给出同样的结果」。这句话在本课代码里是**没有对拍过的**。真正的对拍在下面「实测 2」补上。**（该判断已被 2026-10-14 的实测 8 推翻：本机 `.venv` 现已装 sklearn 1.9.1，系数对拍差值 0.00e+00。）**
+
+> The `Scikit-learn Comparison` block prints nothing but an install hint on this machine. The lesson text claims the from-scratch version and scikit-learn "produce the same results", but the shipped code never compares coefficients. Real comparison supplied below.
+
+### 实测 2：从零梯度下降 vs 正规方程，真对拍
+
+100 个样本，真值 `y = 3.0x + 7.0 + N(0, 2)`（`random.seed(42)`，与课文同种子）：
+
+| 方法 | 学到的 w | 学到的 b | MSE | R^2 |
+|------|----------|----------|-----|-----|
+| 梯度下降 lr=0.005，1000 epoch（产物代码的真实配置） | 3.1433 | 6.5432 | 3.6976 | 0.9566 |
+| 正规方程（闭式解） | 3.0756 | 6.9853 | 3.6443 | **0.9572** |
+| 真值 | 3.0000 | 7.0000 | — | — |
+
+正规方程一步到位、且更接近真值；梯度下降 1000 步还没走完。**这就是「闭式解精确、梯度下降要调步」的量化版本。**
+
+> **2026-10-14 复跑修正两处**：① 原表写「lr=0.01，800 epoch → 3.1433 / 6.5432」，但产物 `code/linear_regression.py` 实际是 `learning_rate=0.005, epochs=1000`；800 epoch 那行打印的是 `w=3.1906 b=6.2336`——**配置标签与产物对不上**。② 原表写正规方程 `R^2 = 0.9772`，复跑产物打印 **0.9572**，且 `1 − MSE_opt/Var(y) = 1 − 3.6443/85.1447 = 0.9572` 完全吻合；闭式解是训练集 R² 的最大化解，必须 ≥ 梯度下降的 0.9566，**0.9772 在数学上不可能**。两只教训同 0/09：课文/讲义的数字必须与产物对拍。
+
+> Closed-form normal equation lands closer to truth in one shot; gradient descent is still moving after 800 epochs.
+
+### 实测 3：`w` 比 `b` 收敛慢（与 Phase 1/04 结论方向相反，要看清对象）
+
+同一个单变量训练的逐步记录（换算回原尺度）：
+
+```text
+raw x lr=0.01 (800 ep)
+  ep=   1 cost= 82.2346 w=0.8908 b=-3.8372
+  ep=   5 cost= 14.1321 w=1.3633 b=-5.7541
+  ep=  20 cost= 12.5654 w=1.3460 b=-5.1905
+  ep=  50 cost= 10.1193 w=1.3018 b=-4.1318
+  ep= 100 cost=  7.4399 w=1.2423 b=-2.7040
+  ep= 200 cost=  4.9485 w=1.1618 b=-0.7739
+  ep= 400 cost=  3.7983 w=1.0870 b= 1.0208
+  ep= 800 cost=  3.6464 w=1.0525 b= 1.8494
+```
+
+800 epoch 后 `w=1.05`、`b=1.85`，离真值 3.0 / 7.0 都还差得远，**但 b 每一步的梯度绝对值是 w 的 3~7 倍，跑得更快**。
+
+Phase 1/04 讲的是「在线性回归里 w 比 b 快 3 倍」——那次的机制是 `dw` 多乘了 `x`（x 平均 3）。**这次方向反了，因为这次 `x` 尺度大 ⇒ `w` 的曲率被 x² 放大、单步被 lr·x² 拖住；b 的曲率是常数 2。** 两个结论都对，取决于 x 的尺度——这正好是「特征缩放为什么必要」的活教材，见实测 4。
+
+> `w` converges slower than `b` here (opposite of the Phase 1/04 finding), because x's scale inflates w's curvature by x². Same mechanism, opposite sign — the feature-scaling lesson in disguise.
+
+### 实测 4：特征标准化，800 epoch → 50 epoch，且能开大学习率
+
+同一批数据，z-score 标准化后 `x` 变成零均值单位方差：
+
+| 配置 | 收敛到 cost=3.64 需要 | 50 epoch 时 w / b（换算回原尺度） |
+|------|----------------------|----------------------------------|
+| 原始 x，lr=0.01 | 800 epoch 还没收敛（cost=3.6464） | 1.30 / -4.13 |
+| 标准化 x，lr=0.01 | 200 epoch 收敛（cost=3.6444） | — |
+| 标准化 x，lr=0.1 | **50 epoch 收敛（cost=3.6443）** | **3.0756 / 6.9853** |
+
+标准化 + 大学习率，**50 步就打到正规方程的解**（3.0756 / 6.9853，一模一样）。代价面从「狭长山谷」变「圆碗」后，一个学习率就能伺候所有参数——这正是 post 测验 Q1 的标准答案。
+
+> Standardization + larger lr reaches the closed-form solution in 50 epochs instead of 800. The cost surface stops being elongated.
+
+### 实测 5：Ridge（alpha 扫描）实测缩水幅度
+
+`code/linear_regression.py` 的 Ridge 段（alpha=0.1）输出：
+
+```text
+Ridge weights: [0.7052, 0.2647, -0.2558]
+Plain weights: [0.7716, 0.2773, -0.2739]
+```
+
+三个特征的权重都被压缩约 8.6%（0.7716→0.7052 等）。闭式解下 alpha 扫描（单变量、L2 只罚 w）：
+
+| alpha | 学到的 w | 学到的 b |
+|-------|----------|----------|
+| 0 | 3.0756 | 6.9853 |
+| 1 | 3.0721 | 7.0024 |
+| 10 | 3.0403 | 7.1546 |
+| 50 | 2.9069 | 7.7944 |
+| 100 | 2.7558 | 8.5193 |
+
+**L2 把 w 往 0 拉，b 往均值拉**——alpha 越大越明显。注意课文说「Ridge weights are smaller」，实测确认**方向对但幅度取决于 alpha**，不是普适的「更小」。
+
+> L2 shrinks w toward 0 and pushes b toward the mean; the amount depends on alpha, not a universal "smaller".
+
+### 实测 6：多项式过拟合的量化扫描（课文练习 2 的完整答案）
+
+`code/linear_regression.py` 的 Polynomial 段只跑了 degree 2 和 5（R^2 = 0.6408 / 0.6686，都没到过拟合）。补跑高次（真值 `y = 0.5x² - 2x + 3`，80 点，噪声 σ=1.5，64/16 划分）：
+
+| degree | train R^2 | test R^2 | 判定 |
+|--------|-----------|----------|------|
+| 1 | 0.2025 | 0.2580 | 欠拟合 |
+| 2 | 0.9132 | 0.9084 | 刚好（真值就是 2 次） |
+| 5 | 0.9530 | 0.9844 | 还行 |
+| 10 | 0.9734 | 0.9756 | 还行 |
+| 16 | 0.9748 | **0.9017** | **开始过拟合** |
+| 20 | 0.9753 | 0.9655 | 波动 |
+
+**过拟合的信号不是「train R^2 高」**——所有高次模型 train R^2 都在 0.97+，肉眼分不出来。**信号是 train/test 的差距**（degree 16：0.9748 vs 0.9017，差 7.3 个点）。
+
+同一份数据，degree=16 加 Ridge（alpha=0.1）：test R^2 从 0.9017 → **0.9764**（train 只降到 0.9672）。**这就是 post 测验 Q3 标准答案「降复杂度或加正则」的量化证据。**
+
+> Overfitting is invisible in train R^2 alone; the signal is the train/test gap. Ridge alpha=0.1 on degree-16 lifts test R^2 from 0.9017 to 0.9764.
+
+### 实测 7：外推会炸，且 R^2 完全看不见
+
+同一份多项式数据（真值 `y=0.5x²-2x+3`），只看样本边缘 x=10.5 / x=11 处的预测：
+
+| degree | train R^2 | x=10.5 预测 | x=11 预测 | 真值 37.12 / 41.50 |
+|--------|-----------|-------------|-----------|---------------------|
+| 2 | 0.957 | 40.72 | 46.06 | 接近 |
+| 10 | 0.964 | 35.94 | 56.92 | 开始飘 |
+| 16 | 0.939 | 1014.23 | 10646.94 | **炸了 255 倍** |
+| 79 | 0.997 | 1589711.27 | 535915770.96 | **炸了 1300 万倍** |
+
+degree=16 在训练区间内 R^2=0.939 看着「还行」，**但在样本边缘外推 0.5 个单位就错 255 倍**。R^2 是在训练数据上算的，它天生看不见外推。生产上这叫「模型在分布外（out-of-distribution）失效」。
+
+> R^2 is computed on training data and structurally cannot see extrapolation error. Degree 16 looks fine inside the sample and is 255× wrong half a unit outside it.
+
+### 实测 8：环境变了——`.venv` 现在装了 scikit-learn，纠正 1 已过时；顺手做真对拍 + 学习率稳定上界
+
+2026-10-14 复跑本机 `.venv`：**scikit-learn 1.9.1 / numpy 2.5.3 已安装**（纠正 1 写于「未装」的当时，现已过时）。`code/linear_regression.py` 末尾的 Sklearn 段这次真的打印了系数：
+
+```text
+=== Scikit-learn Comparison ===
+Coefficient (w): 2.9197
+Intercept (b): 7.2858
+R-squared (test): 0.9686
+MSE (test): 2.6148
+```
+
+真对拍（同一 80/20 训练集，numpy seed 42，从零闭式解 vs sklearn）：
+
+| 实现 | w | b |
+|------|-----|-----|
+| 从零正规方程（本课 Step 3 公式） | 2.8846 | 7.5478 |
+| `sklearn.linear_model.LinearRegression` | 2.8846 | 7.5478 |
+| 差值 | 0.00e+00 | 0.00e+00 |
+
+课文那句「从零实现与 scikit-learn 给出同样的结果」**这次实测成立**，精度到机器零。注意别混：实测 2 的 3.0756 / 6.9853 是**全量 100 个样本**，这里是 **80% 训练集**（2.8846 / 7.5478），不是同一个数。
+
+学习率稳定上界（同一份原始 x∈[0,10] 数据，2000 epoch）：
+
+```text
+lr=0.001  w=3.2537 b=5.1812   # 龟速，2000 步还没到
+lr=0.005  w=2.9121 b=7.4038
+lr=0.01   w=2.9081 b=7.4301
+lr=0.03   w=2.9080 b=7.4302   # 仍然收敛
+lr=0.05   w=nan    b=nan      # 溢出炸掉（RuntimeWarning: overflow encountered in reduce）
+```
+
+理论值：MSE 的 Hessian 是 `(2/n)[[Σx², Σx],[Σx, n]]`，x~U(0,10) 时 λ_max≈68、λ_min≈0.5，稳定条件 `lr < 2/λ_max ≈ 0.03`。**实测 0.03 刚好活着、0.05 死**——这条边界不是调参玄学，是 x 的尺度直接决定的；把 x 标准化后 λ_max 掉回 O(1)，就能安全开到 lr=0.1（见实测 4 的 50 epoch）。
+
+> Re-ran on 2026-10-14: sklearn 1.9.1 / numpy 2.5.3 are now installed, and the shipped Sklearn block does print coefficients. Closed-form vs sklearn agrees to 0.00e+00 on the same 80/20 split. Learning-rate stability bound: lr < 2/λ_max ≈ 0.03 for raw x∈[0,10] — lr=0.03 survives, lr=0.05 overflows to nan.
+
 ## Ship It · 交付
 
 本课产出：
