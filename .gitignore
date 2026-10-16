@@ -103,3 +103,4 @@ site/manuals.html
 !manuals/*/capture/out/*.log
 /.kilo
 /.workbuddy
+.dsh-progress
